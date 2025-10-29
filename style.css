@@ -10,7 +10,7 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: linear-gradient(135deg, #0a6c30ff, #020202ff);
+  background: linear-gradient(135deg, #2979ff, #e91e63);
   color: #fff;
 }
 
@@ -27,10 +27,12 @@ h1 {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   padding: 30px 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
 }
 
 #scrambled-word {
@@ -43,16 +45,25 @@ h1 {
 input {
   width: 100%;
   padding: 10px;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   font-size: 1rem;
   margin-bottom: 20px;
   text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
 }
 
 input:focus {
   outline: none;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  border-color: #ff4081;
+  box-shadow: 0 0 15px rgba(255, 64, 129, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .game-options {
@@ -76,8 +87,10 @@ input:focus {
   padding: 5px;
   border-radius: 5px;
   border: none;
-  background: rgba(255, 255, 255, 0.9);
+  background: #2979ff;
+  color: white;
   cursor: pointer;
+  font-weight: 500;
 }
 
 .buttons {
@@ -90,22 +103,25 @@ button {
   padding: 10px 20px;
   border: none;
   border-radius: 10px;
-  background: #fff;
-  color: #333;
+  background: #ff4081;
+  color: white;
   cursor: pointer;
   font-weight: 600;
   transition: 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 button:hover {
-  background: #f2f2f2;
+  background: #f50057;
   transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(233, 30, 99, 0.3);
 }
 
 button:disabled {
-  background: #ccc;
+  background: #ff80ab;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 #pause-btn {
@@ -114,22 +130,118 @@ button:disabled {
 }
 
 #pause-btn.paused {
-  background: #121111ff;
+  background: #2979ff;
   color: white;
 }
 
 .timer, .score {
   font-size: 1rem;
   margin: 10px 0;
-  color: #f1f1f1;
+  color: #fff;
 }
 
 #time {
-  color: #8e0912ff;
+  color: #ff80ab;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 128, 171, 0.5);
 }
 
 #score {
+  color: #82b1ff;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(130, 177, 255, 0.5);
+}
+
+.container {
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+}
+
+#signup-form {
+  display: none;
+}
+
+form {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 30px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  margin-top: 20px;
+}
+
+form h2 {
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+form input {
+  margin-bottom: 15px;
+}
+
+form p {
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+form a {
   color: #4caf50;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+form a:hover {
+  text-decoration: underline;
+}
+
+/* Player info styles */
+#player-info {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+#player-info span {
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+#player-info button {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  background: #2979ff;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#player-info button:hover {
+  background: #2962ff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Start form styles */
+.start-form {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 30px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.start-form h2 {
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.start-form input {
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 300px;
 }
 
 @media (max-width: 500px) {

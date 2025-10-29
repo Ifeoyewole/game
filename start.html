@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Scramble Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Word Scramble</h1>
+        <div class="start-form">
+            <h2>Enter Your Name</h2>
+            <input type="text" id="player-name" placeholder="Your Name" required>
+            <button id="start-game">Start Game</button>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('start-game').addEventListener('click', () => {
+            const playerName = document.getElementById('player-name').value.trim();
+            if (playerName) {
+                localStorage.setItem('playerName', playerName);
+                window.location.href = 'index.html';
+            } else {
+                alert('Please enter your name to start the game!');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 const POOL_SIZE = 10;
 const USE_JSON_WORDS = true;
 const JSON_WORD_FILE = 'dik.json';
+const STORAGE_KEY = 'wordScrambleProgress';
 
 const DIFFICULTY_SETTINGS = {
   easy: {
@@ -52,18 +53,13 @@ async function loadJsonWords() {
     
     const processedWords = data
       .filter(item => {
-        // Get just the word (first element in each array)
         const word = item[0];
-        // Only include words within our length limits
         return word.length >= MIN_WORD_LENGTH && 
                word.length <= MAX_WORD_LENGTH &&
-               // Only include words that contain letters only
                /^[a-zA-Z]+$/.test(word);
       })
       .map(item => {
-        // Map to our expected format
         const word = item[0];
-        // If there's a third element with category info, use it
         const category = item[2] ? item[2] : "general";
         return { word, category };
       });
@@ -77,24 +73,20 @@ async function loadJsonWords() {
   }
 }
 
-// Select a subset of words from the English words list
 async function selectRandomWords(count = POOL_SIZE) {
   let words = [];
   
   if (USE_JSON_WORDS) {
     words = await loadJsonWords();
     
-    // Fallback to ENGLISH_WORDS if JSON loading fails
     if (!words.length) {
       console.log('Falling back to built-in word list');
       words = window.ENGLISH_WORDS || [];
     }
   } else {
-    // Use the built-in English words
     words = window.ENGLISH_WORDS || [];
   }
   
-  // Make sure we have some words to work with
   if (!words || !words.length) {
     console.error('No words available!');
     return [];
@@ -103,7 +95,6 @@ async function selectRandomWords(count = POOL_SIZE) {
   const selectedIndices = new Set();
   const result = [];
   
-  // Select 'count' unique random words
   while (selectedIndices.size < count && selectedIndices.size < words.length) {
     const randomIndex = Math.floor(Math.random() * words.length);
     
@@ -111,7 +102,6 @@ async function selectRandomWords(count = POOL_SIZE) {
       selectedIndices.add(randomIndex);
       const wordObj = words[randomIndex];
       
-      // Add to result without hint
       result.push({
         word: wordObj.word
       });
@@ -130,11 +120,21 @@ const difficultySelector = document.getElementById("difficulty");
 const timerDisplay = document.getElementById("time");
 const scoreDisplay = document.getElementById("score");
 
+// Add Enter key functionality for input field
+userInput.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Prevent form submission
+        checkWord();
+    }
+});
+
 let correctWord = "";
 let timer;
 let timeLeft = DIFFICULTY_SETTINGS[currentDifficulty].timeLimit;
 let score = 0;
 let isPaused = false; // Track if game is paused
+let playerName = localStorage.getItem('playerName') || 'Player'; // Get player name from storage
+let highScore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0; // Get high score from storage
 
 // Update game settings based on selected difficulty
 function updateDifficulty(difficulty) {
@@ -167,21 +167,17 @@ async function initGame() {
     
     const randomObj = words[Math.floor(Math.random() * words.length)];
     let wordArray = randomObj.word.split("");
-    const originalWord = [...wordArray]; // Keep a copy of the original word
+    const originalWord = [...wordArray];
     
-    // Get difficulty settings
     const settings = DIFFICULTY_SETTINGS[currentDifficulty];
     const complexity = settings.scrambleComplexity;
     const preserveFirstLast = settings.preserveFirstLast;
     const extraScrambling = settings.extraScrambling;
     
-    // For easy mode, if we're preserving first and last letters, we only scramble the middle
     if (preserveFirstLast && wordArray.length > 3) {
-      // Save first and last letters
       const firstLetter = wordArray[0];
       const lastLetter = wordArray[wordArray.length - 1];
       
-      // Extract the middle part for scrambling
       const middle = wordArray.slice(1, wordArray.length - 1);
       
       // Scramble the middle part based on complexity
@@ -278,7 +274,14 @@ function checkWord() {
   if (userWord === correctWord.toLowerCase()) {
     score++;
     scoreDisplay.textContent = score;
-    alert("🎉 Correct! Well done.");
+    
+    // Update high score if needed
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem(STORAGE_KEY, highScore.toString());
+    }
+    
+    alert(`🎉 Correct! Well done.\nScore: ${score}\nHigh Score: ${highScore}`);
     initGame();
   } else {
     alert("Wrong! Try again.");
@@ -303,8 +306,78 @@ difficultySelector.addEventListener("change", (e) => {
   }
 });
 
+
+// Placeholder for checking if user is logged in
+function checkAuth() {
+  // For frontend flow only - assumes the user is authenticated
+  return true;
+}
+
+// Placeholder for logout functionality
+function logoutUser() {
+  // Will be implemented by backend
+  window.location.href = 'login-&signup.html';
+}
+
+function addUserInterface() {
+  if (!document.getElementById('user-info')) {
+    const userInfoDiv = document.createElement('div');
+    userInfoDiv.id = 'user-info';
+    
+    const usernameSpan = document.createElement('span');
+    usernameSpan.textContent = `Hello, Guest!`; 
+    
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = 'Logout';
+    logoutBtn.addEventListener('click', logoutUser);
+    
+    userInfoDiv.appendChild(usernameSpan);
+    userInfoDiv.appendChild(logoutBtn);
+  
+    document.body.appendChild(userInfoDiv);
+  }
+}
+
+// Add player info and restart button to the UI
+function addPlayerInterface() {
+  if (!document.getElementById('player-info')) {
+    const playerInfoDiv = document.createElement('div');
+    playerInfoDiv.id = 'player-info';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `Player: ${playerName}`;
+    
+    const highScoreSpan = document.createElement('span');
+    highScoreSpan.style.marginLeft = '20px';
+    highScoreSpan.textContent = `High Score: ${highScore}`;
+    
+    const restartBtn = document.createElement('button');
+    restartBtn.textContent = 'New Game';
+    restartBtn.addEventListener('click', () => {
+      if (confirm('Start a new game with a different name?')) {
+        window.location.href = 'start.html';
+      }
+    });
+    
+    playerInfoDiv.appendChild(nameSpan);
+    playerInfoDiv.appendChild(highScoreSpan);
+    playerInfoDiv.appendChild(restartBtn);
+    
+    document.body.appendChild(playerInfoDiv);
+  }
+}
+
 // Initialize the game when the page loads
 window.addEventListener("load", () => {
+  // Check if player name exists
+  if (!localStorage.getItem('playerName')) {
+    window.location.href = 'start.html';
+    return;
+  }
+  
+  // Add player interface
+  addPlayerInterface();
+  
   // Set the initial difficulty from the dropdown
   currentDifficulty = difficultySelector.value;
   updateDifficulty(currentDifficulty);
