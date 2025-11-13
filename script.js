@@ -246,8 +246,8 @@ function startTimer() {
       timerDisplay.textContent = timeLeft;
       if (timeLeft <= 0) {
         clearInterval(timer);
-        alert(` Time's up! The correct word was: ${correctWord}`);
-        initGame();
+        showPopup(`⏰ Time's up! The word was: ${correctWord}`, false);
+        setTimeout(initGame, 2000);
       }
     }
   }, 1000);
@@ -268,9 +268,27 @@ function togglePause() {
   }
 }
 
+function showPopup(message, isSuccess) {
+  const popup = document.getElementById('popup');
+  popup.className = `popup ${isSuccess ? 'success' : 'error'}`;
+  const messageEl = popup.querySelector('.popup-message');
+  messageEl.textContent = message;
+  
+  popup.classList.add('show');
+  
+  // Hide popup after 2 seconds
+  setTimeout(() => {
+    popup.classList.remove('show');
+  }, 5000);
+}
+
 function checkWord() {
   let userWord = userInput.value.trim().toLowerCase();
-  if (!userWord) return alert("Please enter a word!");
+  if (!userWord) {
+    showPopup("Please enter a word!", false);
+    return;
+  }
+  
   if (userWord === correctWord.toLowerCase()) {
     score++;
     scoreDisplay.textContent = score;
@@ -281,10 +299,10 @@ function checkWord() {
       localStorage.setItem(STORAGE_KEY, highScore.toString());
     }
     
-    alert(`🎉 Correct! Well done.\nScore: ${score}\nHigh Score: ${highScore}`);
+    showPopup(`🎉 Correct! Score: ${score} | High Score: ${highScore}`, true);
     initGame();
   } else {
-    alert("Wrong! Try again.");
+    showPopup("❌ Wrong! Try again.", false);
   }
 }
 
