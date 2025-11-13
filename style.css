@@ -12,14 +12,18 @@ body {
   min-height: 100vh;
   background: linear-gradient(135deg, #2979ff, #e91e63);
   color: #fff;
-  padding-top: 75px; /* Add padding for the fixed header */
-  overflow-x: hidden; /* Prevent horizontal scroll on small devices */
+  padding: 70px 10px 20px 10px;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .game-container {
   text-align: center;
-  width: 90%;
+  width: 100%;
   max-width: 400px;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
 h1 {
@@ -31,30 +35,35 @@ h1 {
 .card {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  padding: 30px 20px;
+  padding: 25px 20px;
   box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 #scrambled-word {
-  font-size: 1.8rem;
+  font-size: clamp(1.2rem, 4vw, 1.8rem);
   font-weight: 600;
   margin: 15px 0;
   letter-spacing: 2px;
+  word-wrap: break-word;
 }
 
 input {
   width: 100%;
-  padding: 10px;
+  max-width: 100%;
+  padding: 12px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 3vw, 1rem);
   margin-bottom: 20px;
   text-align: center;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 input:focus {
@@ -73,26 +82,34 @@ input::placeholder {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .difficulty-selector {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 150px;
+  justify-content: center;
 }
 
 .difficulty-selector label {
-  font-size: 0.9rem;
+  font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+  white-space: nowrap;
 }
 
 .difficulty-selector select {
-  padding: 5px;
+  padding: 6px 10px;
   border-radius: 5px;
   border: none;
   background: #2979ff;
   color: white;
   cursor: pointer;
   font-weight: 500;
+  font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+  min-width: 100px;
 }
 
 .buttons {
