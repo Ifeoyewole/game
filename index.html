@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Word Scramble Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="game-container">
         <h1>Word Scramble</h1>
@@ -23,19 +25,38 @@
                     <label for="category">Category:</label>
                     <select id="category">
                         <option value="general" selected>General</option>
-                        <option value="sports">Sports</option>
                     </select>
                 </div>
-                <button id="pause-btn">Pause</button>
             </div>
+
+            <!-- Streak display -->
+            <div id="streak-display" class="streak-display"></div>
+
             <h2 id="scrambled-word"></h2>
             <input type="text" id="user-input" placeholder="Enter correct word" autocomplete="off">
             <div class="buttons">
+                <button id="hint-btn">💡 Hint (<span id="hints-left">3</span>)</button>
                 <button id="refresh-btn">Skip</button>
                 <button id="check-btn">Check</button>
             </div>
             <p class="timer">Time left: <span id="time">30</span>s</p>
             <p class="score">Score: <span id="score">0</span></p>
+
+            <!-- Stats panel -->
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Solved</span>
+                    <span id="stats-words" class="stat-value">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Accuracy</span>
+                    <span id="stats-accuracy" class="stat-value">0%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Best Streak</span>
+                    <span id="stats-best-streak" class="stat-value">0</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -48,4 +69,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

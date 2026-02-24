@@ -1,14 +1,25 @@
 const POOL_SIZE = 10;
 const USE_JSON_WORDS = true;
-let JSON_WORD_FILE = 'dik.json'; 
 const STORAGE_KEY = 'wordScrambleProgress';
+const STATS_KEY = 'wordScrambleStats';
 
 const WORD_CATEGORIES = {
   general: 'dik.json',
-  sports: 'sports_words.json'
+  sports: 'sports_words.json',
+  food: 'food.json',
+  tech: 'tech.json',
+  animals: 'animals.json',
+  science: 'science.json',
+  geography: 'geography.json',
+  music: 'music.json',
+  movies: 'movies.json',
+  history: 'history.json',
+  nature: 'nature.json',
+  fashion: 'fashion.json'
 };
 
 let currentCategory = 'general';
+let JSON_WORD_FILE = WORD_CATEGORIES[currentCategory];
 
 const DIFFICULTY_SETTINGS = {
   easy: {
@@ -24,16 +35,16 @@ const DIFFICULTY_SETTINGS = {
     maxWordLength: 7,
     timeLimit: 45,
     scrambleComplexity: 1,
-    preserveFirstLast: false, 
-    extraScrambling: false 
+    preserveFirstLast: false,
+    extraScrambling: false
   },
   hard: {
     minWordLength: 6,
     maxWordLength: 12,
     timeLimit: 30,
     scrambleComplexity: 2,
-    preserveFirstLast: false, 
-    extraScrambling: true 
+    preserveFirstLast: false,
+    extraScrambling: true
   }
 };
 
@@ -49,25 +60,23 @@ let jsonWordsCache = null;
 
 async function loadJsonWords() {
   if (jsonWordsCache) return jsonWordsCache;
-  
+
   try {
     const response = await fetch(JSON_WORD_FILE);
     if (!response.ok) {
       throw new Error(`Failed to load ${JSON_WORD_FILE}: ${response.status}`);
     }
-    
+
     const data = await response.json();
     let processedWords = [];
-    
-    // Check if data is array of arrays (dik.json format) or array of strings (sports_words.json format)
+
     if (data.length > 0 && Array.isArray(data[0])) {
-      // dik.json format: [["word", "definition", "category"], ...]
       processedWords = data
         .filter(item => {
           const word = item[0];
-          return word.length >= MIN_WORD_LENGTH && 
-                 word.length <= MAX_WORD_LENGTH &&
-                 /^[a-zA-Z]+$/.test(word);
+          return word.length >= MIN_WORD_LENGTH &&
+            word.length <= MAX_WORD_LENGTH &&
+            /^[a-zA-Z]+$/.test(word);
         })
         .map(item => {
           const word = item[0];
@@ -78,13 +87,13 @@ async function loadJsonWords() {
       processedWords = data
         .filter(word => {
           return typeof word === 'string' &&
-                 word.length >= MIN_WORD_LENGTH && 
-                 word.length <= MAX_WORD_LENGTH &&
-                 /^[a-zA-Z]+$/.test(word);
+            word.length >= MIN_WORD_LENGTH &&
+            word.length <= MAX_WORD_LENGTH &&
+            /^[a-zA-Z]+$/.test(word);
         })
         .map(word => word.toLowerCase());
     }
-    
+
     jsonWordsCache = processedWords;
     console.log(`Loaded ${processedWords.length} words from ${JSON_WORD_FILE}`);
     return processedWords;
@@ -96,10 +105,10 @@ async function loadJsonWords() {
 
 async function selectRandomWords(count = POOL_SIZE) {
   let words = [];
-  
+
   if (USE_JSON_WORDS) {
     words = await loadJsonWords();
-    
+
     if (!words.length) {
       console.log('Falling back to built-in word list');
       words = window.ENGLISH_WORDS || [];
@@ -107,31 +116,26 @@ async function selectRandomWords(count = POOL_SIZE) {
   } else {
     words = window.ENGLISH_WORDS || [];
   }
-  
+
   if (!words || !words.length) {
     console.error('No words available!');
     return [];
   }
-  
+
   const selectedIndices = new Set();
   const result = [];
-  
+
   while (selectedIndices.size < count && selectedIndices.size < words.length) {
     const randomIndex = Math.floor(Math.random() * words.length);
-    
+
     if (!selectedIndices.has(randomIndex)) {
       selectedIndices.add(randomIndex);
       const wordObj = words[randomIndex];
-      
-      // Handle both formats: {word: "...", category: "..."} and simple strings
       const word = typeof wordObj === 'string' ? wordObj : wordObj.word;
-      
-      result.push({
-        word: word
-      });
+      result.push({ word });
     }
   }
-  
+
   return result;
 }
 
@@ -139,38 +143,194 @@ const scrambledWord = document.getElementById("scrambled-word");
 const userInput = document.getElementById("user-input");
 const refreshBtn = document.getElementById("refresh-btn");
 const checkBtn = document.getElementById("check-btn");
-const pauseBtn = document.getElementById("pause-btn");
+const hintBtn = document.getElementById("hint-btn");
 const difficultySelector = document.getElementById("difficulty");
 const categorySelector = document.getElementById("category");
 const timerDisplay = document.getElementById("time");
 const scoreDisplay = document.getElementById("score");
+const streakDisplay = document.getElementById("streak-display");
+const hintsLeftDisplay = document.getElementById("hints-left");
+const statsWordsDisplay = document.getElementById("stats-words");
+const statsAccuracyDisplay = document.getElementById("stats-accuracy");
+const statsBestStreakDisplay = document.getElementById("stats-best-streak");
 
-// Add Enter key functionality for input field
-userInput.addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-        event.preventDefault(); // Prevent form submission
-        checkWord();
+function formatCategoryLabel(key) {
+  if (!key) return '';
+  return key
+    .split(/[-_]/)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function populateCategorySelector() {
+  if (!categorySelector) return;
+  categorySelector.innerHTML = '';
+  Object.keys(WORD_CATEGORIES).forEach(category => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = formatCategoryLabel(category);
+    if (category === currentCategory) {
+      option.selected = true;
     }
+    categorySelector.appendChild(option);
+  });
+}
+
+populateCategorySelector();
+
+userInput.addEventListener("keypress", function (event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    checkWord();
+  }
 });
 
 let correctWord = "";
 let timer;
 let timeLeft = DIFFICULTY_SETTINGS[currentDifficulty].timeLimit;
 let score = 0;
-let isPaused = false; // Track if game is paused
-let playerName = localStorage.getItem('playerName') || 'Player'; // Get player name from storage
-let highScore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0; // Get high score from storage
+let isPaused = false;
+let playerName = localStorage.getItem('playerName') || 'Player';
+let highScore = parseInt(localStorage.getItem(STORAGE_KEY)) || 0;
 
-// Update game settings based on selected difficulty
+// Streak & combo system
+let streak = 0;
+let bestStreak = 0;
+
+// Hint system
+const MAX_HINTS = 3;
+let hintsRemaining = MAX_HINTS;
+let revealedPositions = new Set();
+
+// Stats tracking
+let stats = JSON.parse(localStorage.getItem(STATS_KEY)) || {
+  totalWords: 0,
+  correctWords: 0,
+  totalAttempts: 0,
+  bestStreak: 0
+};
+
+function getStreakMultiplier() {
+  if (streak >= 10) return 5;
+  if (streak >= 5) return 3;
+  if (streak >= 3) return 2;
+  return 1;
+}
+
+function getStreakEmoji() {
+  if (streak >= 10) return '🔥🔥🔥';
+  if (streak >= 5) return '🔥🔥';
+  if (streak >= 3) return '🔥';
+  return '';
+}
+
+function updateStreakDisplay() {
+  if (!streakDisplay) return;
+  if (streak >= 2) {
+    const multiplier = getStreakMultiplier();
+    const emoji = getStreakEmoji();
+    streakDisplay.textContent = `${emoji} Streak: ${streak} (${multiplier}x)`;
+    streakDisplay.classList.add('active');
+
+    // Pulse animation on streak milestones
+    if (streak === 3 || streak === 5 || streak === 10) {
+      streakDisplay.classList.add('milestone');
+      setTimeout(() => streakDisplay.classList.remove('milestone'), 1000);
+    }
+  } else {
+    streakDisplay.textContent = '';
+    streakDisplay.classList.remove('active');
+  }
+}
+
+function updateHintsDisplay() {
+  if (hintsLeftDisplay) {
+    hintsLeftDisplay.textContent = hintsRemaining;
+  }
+  if (hintBtn) {
+    hintBtn.disabled = hintsRemaining <= 0 || !correctWord;
+  }
+}
+
+function updateStatsDisplay() {
+  if (statsWordsDisplay) statsWordsDisplay.textContent = stats.correctWords;
+  if (statsAccuracyDisplay) {
+    const accuracy = stats.totalAttempts > 0
+      ? Math.round((stats.correctWords / stats.totalAttempts) * 100)
+      : 0;
+    statsAccuracyDisplay.textContent = accuracy + '%';
+  }
+  if (statsBestStreakDisplay) statsBestStreakDisplay.textContent = stats.bestStreak;
+}
+
+function saveStats() {
+  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
+function useHint() {
+  if (hintsRemaining <= 0 || !correctWord) return;
+
+  // Find positions not yet revealed
+  const unrevealed = [];
+  for (let i = 0; i < correctWord.length; i++) {
+    if (!revealedPositions.has(i)) {
+      unrevealed.push(i);
+    }
+  }
+
+  if (unrevealed.length === 0) return;
+
+  // Reveal a random position
+  const revealIdx = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+  revealedPositions.add(revealIdx);
+  hintsRemaining--;
+
+  // Update the scrambled display to show the hint
+  const currentDisplay = scrambledWord.textContent.split('');
+  // Build a hint display showing revealed letters in correct positions
+  let hintDisplay = '';
+  for (let i = 0; i < correctWord.length; i++) {
+    if (revealedPositions.has(i)) {
+      hintDisplay += correctWord[i].toUpperCase();
+    } else {
+      hintDisplay += '_';
+    }
+  }
+
+  scrambledWord.innerHTML = `<span class="scrambled-text">${scrambledWord.dataset.scrambled}</span><br><span class="hint-text">${hintDisplay}</span>`;
+
+  // Deduct 3 seconds per hint
+  timeLeft = Math.max(1, timeLeft - 3);
+  timerDisplay.textContent = timeLeft;
+
+  updateHintsDisplay();
+  showPopup(`💡 Hint! Letter "${correctWord[revealIdx].toUpperCase()}" revealed. (-3s)`, false);
+}
+
+function revealWordAnimation(word) {
+  scrambledWord.innerHTML = '';
+  scrambledWord.classList.add('revealing');
+
+  const letters = word.split('');
+  letters.forEach((letter, index) => {
+    const span = document.createElement('span');
+    span.textContent = letter;
+    span.className = 'reveal-letter';
+    span.style.animationDelay = `${index * 0.1}s`;
+    scrambledWord.appendChild(span);
+  });
+
+  // Remove the class after animation completes
+  setTimeout(() => {
+    scrambledWord.classList.remove('revealing');
+  }, letters.length * 100 + 800);
+}
+
 function updateDifficulty(difficulty) {
   currentDifficulty = difficulty;
   MIN_WORD_LENGTH = DIFFICULTY_SETTINGS[difficulty].minWordLength;
   MAX_WORD_LENGTH = DIFFICULTY_SETTINGS[difficulty].maxWordLength;
-  
-  // Clear the JSON words cache to force reloading with new word length filters
   jsonWordsCache = null;
-  
-  // Update time limit for the next game
   timeLeft = DIFFICULTY_SETTINGS[difficulty].timeLimit;
   timerDisplay.textContent = timeLeft;
 }
@@ -179,33 +339,37 @@ async function initGame() {
   clearInterval(timer);
   timeLeft = DIFFICULTY_SETTINGS[currentDifficulty].timeLimit;
   timerDisplay.textContent = timeLeft;
-  
+
+  // Reset hints for this round
+  hintsRemaining = MAX_HINTS;
+  revealedPositions.clear();
+  updateHintsDisplay();
+
   scrambledWord.textContent = "Loading...";
-  
+  scrambledWord.innerHTML = "Loading...";
+
   try {
     const words = await selectRandomWords();
-    
+
     if (!words || words.length === 0) {
       scrambledWord.textContent = "Error! Could not load words. Please refresh the page.";
       return;
     }
-    
+
     const randomObj = words[Math.floor(Math.random() * words.length)];
     let wordArray = randomObj.word.split("");
     const originalWord = [...wordArray];
-    
+
     const settings = DIFFICULTY_SETTINGS[currentDifficulty];
     const complexity = settings.scrambleComplexity;
     const preserveFirstLast = settings.preserveFirstLast;
     const extraScrambling = settings.extraScrambling;
-    
+
     if (preserveFirstLast && wordArray.length > 3) {
       const firstLetter = wordArray[0];
       const lastLetter = wordArray[wordArray.length - 1];
-      
       const middle = wordArray.slice(1, wordArray.length - 1);
-      
-      // Scramble the middle part based on complexity
+
       if (complexity > 0) {
         const iterations = Math.max(1, Math.ceil(middle.length * complexity));
         for (let i = 0; i < iterations; i++) {
@@ -214,11 +378,9 @@ async function initGame() {
           [middle[idx1], middle[idx2]] = [middle[idx2], middle[idx1]];
         }
       }
-      
-      // Reconstruct the word with preserved first and last letters
+
       wordArray = [firstLetter, ...middle, lastLetter];
     } else {
-      // Standard Fisher-Yates shuffle, intensity based on complexity
       const iterations = Math.max(1, Math.ceil(wordArray.length * complexity));
       for (let i = 0; i < iterations; i++) {
         for (let j = wordArray.length - 1; j > 0; j--) {
@@ -227,32 +389,30 @@ async function initGame() {
         }
       }
     }
-    
-    // Add extra scrambling for hard mode
+
     if (extraScrambling) {
-      const extraSwaps = Math.floor(wordArray.length * 0.7); // 70% of word length for hard mode
+      const extraSwaps = Math.floor(wordArray.length * 0.7);
       for (let i = 0; i < extraSwaps; i++) {
         const pos1 = Math.floor(Math.random() * wordArray.length);
         const pos2 = Math.floor(Math.random() * wordArray.length);
         [wordArray[pos1], wordArray[pos2]] = [wordArray[pos2], wordArray[pos1]];
       }
     }
-    
-    // Ensure the word is actually scrambled
+
     if (wordArray.join('') === originalWord.join('')) {
-      // If word wasn't scrambled (rare case), swap a couple of letters
       if (wordArray.length > 1) {
         const pos1 = Math.floor(Math.random() * wordArray.length);
         let pos2 = Math.floor(Math.random() * wordArray.length);
-        // Make sure pos2 is different from pos1
         while (pos2 === pos1) {
           pos2 = Math.floor(Math.random() * wordArray.length);
         }
         [wordArray[pos1], wordArray[pos2]] = [wordArray[pos2], wordArray[pos1]];
       }
     }
-    
-    scrambledWord.textContent = wordArray.join("");
+
+    const scrambledText = wordArray.join("");
+    scrambledWord.textContent = scrambledText;
+    scrambledWord.dataset.scrambled = scrambledText;
     correctWord = randomObj.word;
     userInput.value = "";
     startTimer();
@@ -263,7 +423,7 @@ async function initGame() {
 }
 
 function startTimer() {
-  clearInterval(timer); // Clear any existing timer
+  clearInterval(timer);
   isPaused = false;
   timer = setInterval(() => {
     if (!isPaused) {
@@ -271,40 +431,35 @@ function startTimer() {
       timerDisplay.textContent = timeLeft;
       if (timeLeft <= 0) {
         clearInterval(timer);
-        showPopup(`⏰ Time's up! The word was: ${correctWord}`, false);
-        setTimeout(initGame, 2000);
+
+        // Track stats for timeout
+        stats.totalAttempts++;
+        streak = 0;
+        updateStreakDisplay();
+        saveStats();
+        updateStatsDisplay();
+
+        // Animated word reveal instead of plain text
+        revealWordAnimation(correctWord);
+        showPopup(`⏰ Time's up! The word was:`, false);
+        setTimeout(initGame, 2500);
       }
     }
   }, 1000);
 }
 
-function togglePause() {
-  isPaused = !isPaused;
-  if (isPaused) {
-    pauseBtn.textContent = "Resume";
-    pauseBtn.classList.add("paused");
-    userInput.disabled = true;
-    checkBtn.disabled = true;
-  } else {
-    pauseBtn.textContent = "Pause";
-    pauseBtn.classList.remove("paused");
-    userInput.disabled = false;
-    checkBtn.disabled = false;
-  }
-}
 
 function showPopup(message, isSuccess) {
   const popup = document.getElementById('popup');
   popup.className = `popup ${isSuccess ? 'success' : 'error'}`;
   const messageEl = popup.querySelector('.popup-message');
   messageEl.textContent = message;
-  
+
   popup.classList.add('show');
-  
-  // Hide popup after 2 seconds
+
   setTimeout(() => {
     popup.classList.remove('show');
-  }, 5000);
+  }, 3000);
 }
 
 function checkWord() {
@@ -313,75 +468,83 @@ function checkWord() {
     showPopup("Please enter a word!", false);
     return;
   }
-  
+
+  stats.totalAttempts++;
+  stats.totalWords++;
+
   if (userWord === correctWord.toLowerCase()) {
-    score++;
+    // Update streak
+    streak++;
+    if (streak > bestStreak) bestStreak = streak;
+    if (streak > stats.bestStreak) stats.bestStreak = streak;
+
+    // Calculate points with multiplier
+    const multiplier = getStreakMultiplier();
+    const points = multiplier;
+    score += points;
     scoreDisplay.textContent = score;
-    
-    // Update high score if needed
+
+    // Update stats
+    stats.correctWords++;
+
     if (score > highScore) {
       highScore = score;
       localStorage.setItem(STORAGE_KEY, highScore.toString());
     }
-    
-    showPopup(`🎉 Correct! Score: ${score} | High Score: ${highScore}`, true);
+
+    saveStats();
+    updateStreakDisplay();
+    updateStatsDisplay();
+
+    const streakEmoji = getStreakEmoji();
+    const multiplierText = multiplier > 1 ? ` (${multiplier}x!)` : '';
+    showPopup(`🎉 Correct! +${points}pts${multiplierText} ${streakEmoji} | High Score: ${highScore}`, true);
     initGame();
   } else {
+    streak = 0;
+    updateStreakDisplay();
+    saveStats();
+    updateStatsDisplay();
     showPopup("❌ Wrong! Try again.", false);
   }
 }
 
-refreshBtn.addEventListener("click", () => initGame());
+refreshBtn.addEventListener("click", () => {
+  streak = 0;
+  updateStreakDisplay();
+  initGame();
+});
 checkBtn.addEventListener("click", checkWord);
-pauseBtn.addEventListener("click", togglePause);
+if (hintBtn) hintBtn.addEventListener("click", useHint);
 
-// Update game settings when difficulty changes
 difficultySelector.addEventListener("change", (e) => {
   updateDifficulty(e.target.value);
-  // If the game is in progress, ask the user if they want to restart
   if (timer) {
     if (confirm("Changing difficulty will restart the game. Continue?")) {
       initGame();
     } else {
-      // Reset the selector to the previous value if they cancel
       difficultySelector.value = currentDifficulty;
     }
   }
 });
 
-// Update game settings when category changes
 categorySelector.addEventListener("change", (e) => {
   const newCategory = e.target.value;
   currentCategory = newCategory;
   JSON_WORD_FILE = WORD_CATEGORIES[newCategory];
-  
-  // Clear the JSON words cache to force reloading from new file
   jsonWordsCache = null;
-  
-  // If the game is in progress, ask the user if they want to restart
-  if (timer) {
-    if (confirm("Changing category will restart the game. Continue?")) {
-      initGame();
-    } else {
-      // Reset the selector to the previous value if they cancel
-      categorySelector.value = currentCategory;
-      JSON_WORD_FILE = WORD_CATEGORIES[currentCategory];
-    }
-  } else {
-    initGame();
-  }
+  score = 0;
+  scoreDisplay.textContent = score;
+  streak = 0;
+  updateStreakDisplay();
+  initGame();
 });
 
-
-// Placeholder for checking if user is logged in
 function checkAuth() {
-  // For frontend flow only - assumes the user is authenticated
   return true;
 }
 
-// Placeholder for logout functionality
 function logoutUser() {
-  // Will be implemented by backend
   window.location.href = 'login-&signup.html';
 }
 
@@ -389,34 +552,33 @@ function addUserInterface() {
   if (!document.getElementById('user-info')) {
     const userInfoDiv = document.createElement('div');
     userInfoDiv.id = 'user-info';
-    
+
     const usernameSpan = document.createElement('span');
-    usernameSpan.textContent = `Hello, Guest!`; 
-    
+    usernameSpan.textContent = `Hello, Guest!`;
+
     const logoutBtn = document.createElement('button');
     logoutBtn.textContent = 'Logout';
     logoutBtn.addEventListener('click', logoutUser);
-    
+
     userInfoDiv.appendChild(usernameSpan);
     userInfoDiv.appendChild(logoutBtn);
-  
+
     document.body.appendChild(userInfoDiv);
   }
 }
 
-// Add player info and restart button to the UI
 function addPlayerInterface() {
   if (!document.getElementById('player-info')) {
     const playerInfoDiv = document.createElement('div');
     playerInfoDiv.id = 'player-info';
-    
+
     const nameSpan = document.createElement('span');
     nameSpan.textContent = `Player: ${playerName}`;
-    
+
     const highScoreSpan = document.createElement('span');
     highScoreSpan.style.marginLeft = '20px';
     highScoreSpan.textContent = `High Score: ${highScore}`;
-    
+
     const restartBtn = document.createElement('button');
     restartBtn.textContent = 'New Game';
     restartBtn.addEventListener('click', () => {
@@ -424,27 +586,26 @@ function addPlayerInterface() {
         window.location.href = 'start.html';
       }
     });
-    
+
     playerInfoDiv.appendChild(nameSpan);
     playerInfoDiv.appendChild(highScoreSpan);
     playerInfoDiv.appendChild(restartBtn);
-    
+
     document.body.appendChild(playerInfoDiv);
   }
 }
 
-// Initialize the game when the page loads
 window.addEventListener("load", () => {
-  // Check if player name exists
   if (!localStorage.getItem('playerName')) {
     window.location.href = 'start.html';
     return;
   }
-  
-  // Add player interface
+
   addPlayerInterface();
-  
-  // Set the initial difficulty from the dropdown
+  updateStatsDisplay();
+  updateStreakDisplay();
+  updateHintsDisplay();
+
   currentDifficulty = difficultySelector.value;
   updateDifficulty(currentDifficulty);
   initGame();
