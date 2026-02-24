@@ -1,7 +1,14 @@
 const POOL_SIZE = 10;
 const USE_JSON_WORDS = true;
-const JSON_WORD_FILE = 'dik.json';
+let JSON_WORD_FILE = 'dik.json'; 
 const STORAGE_KEY = 'wordScrambleProgress';
+
+const WORD_CATEGORIES = {
+  general: 'dik.json',
+  sports: 'sports_words.json'
+};
+
+let currentCategory = 'general';
 
 const DIFFICULTY_SETTINGS = {
   easy: {
@@ -50,19 +57,33 @@ async function loadJsonWords() {
     }
     
     const data = await response.json();
+    let processedWords = [];
     
-    const processedWords = data
-      .filter(item => {
-        const word = item[0];
-        return word.length >= MIN_WORD_LENGTH && 
-               word.length <= MAX_WORD_LENGTH &&
-               /^[a-zA-Z]+$/.test(word);
-      })
-      .map(item => {
-        const word = item[0];
-        const category = item[2] ? item[2] : "general";
-        return { word, category };
-      });
+    // Check if data is array of arrays (dik.json format) or array of strings (sports_words.json format)
+    if (data.length > 0 && Array.isArray(data[0])) {
+      // dik.json format: [["word", "definition", "category"], ...]
+      processedWords = data
+        .filter(item => {
+          const word = item[0];
+          return word.length >= MIN_WORD_LENGTH && 
+                 word.length <= MAX_WORD_LENGTH &&
+                 /^[a-zA-Z]+$/.test(word);
+        })
+        .map(item => {
+          const word = item[0];
+          const category = item[2] ? item[2] : "general";
+          return { word, category };
+        });
+    } else {
+      processedWords = data
+        .filter(word => {
+          return typeof word === 'string' &&
+                 word.length >= MIN_WORD_LENGTH && 
+                 word.length <= MAX_WORD_LENGTH &&
+                 /^[a-zA-Z]+$/.test(word);
+        })
+        .map(word => word.toLowerCase());
+    }
     
     jsonWordsCache = processedWords;
     console.log(`Loaded ${processedWords.length} words from ${JSON_WORD_FILE}`);
@@ -102,8 +123,11 @@ async function selectRandomWords(count = POOL_SIZE) {
       selectedIndices.add(randomIndex);
       const wordObj = words[randomIndex];
       
+      // Handle both formats: {word: "...", category: "..."} and simple strings
+      const word = typeof wordObj === 'string' ? wordObj : wordObj.word;
+      
       result.push({
-        word: wordObj.word
+        word: word
       });
     }
   }
@@ -117,6 +141,7 @@ const refreshBtn = document.getElementById("refresh-btn");
 const checkBtn = document.getElementById("check-btn");
 const pauseBtn = document.getElementById("pause-btn");
 const difficultySelector = document.getElementById("difficulty");
+const categorySelector = document.getElementById("category");
 const timerDisplay = document.getElementById("time");
 const scoreDisplay = document.getElementById("score");
 
@@ -321,6 +346,29 @@ difficultySelector.addEventListener("change", (e) => {
       // Reset the selector to the previous value if they cancel
       difficultySelector.value = currentDifficulty;
     }
+  }
+});
+
+// Update game settings when category changes
+categorySelector.addEventListener("change", (e) => {
+  const newCategory = e.target.value;
+  currentCategory = newCategory;
+  JSON_WORD_FILE = WORD_CATEGORIES[newCategory];
+  
+  // Clear the JSON words cache to force reloading from new file
+  jsonWordsCache = null;
+  
+  // If the game is in progress, ask the user if they want to restart
+  if (timer) {
+    if (confirm("Changing category will restart the game. Continue?")) {
+      initGame();
+    } else {
+      // Reset the selector to the previous value if they cancel
+      categorySelector.value = currentCategory;
+      JSON_WORD_FILE = WORD_CATEGORIES[currentCategory];
+    }
+  } else {
+    initGame();
   }
 });
 
